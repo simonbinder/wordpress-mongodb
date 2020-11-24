@@ -1,6 +1,6 @@
 {
-  "name": "purple-plugin/purpledshub",
-  "description": "This plugin extends Wordpress by adding Multi Channel Publishing capabilities",
+  "name": "purple-plugin/purpledshub-nosql",
+  "description": "This plugin extends Wordpress by syncing to a MongoDB",
   "type": "wordpress-plugin",
   "require": {
     "composer/installers": "^1.7",
