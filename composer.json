@@ -4,6 +4,7 @@
   "type": "wordpress-plugin",
   "require": {
     "composer/installers": "^1.7",
+    "ext-mongodb": "^1.8",
     "mongodb/mongodb": "^1.7",
     "webonyx/graphql-php": "^14.3"
   },
