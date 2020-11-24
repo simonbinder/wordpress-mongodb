@@ -23,7 +23,7 @@ if ( ! class_exists( 'Save_Post' ) ) {
 		public function __construct() {
 			if ( is_null( $this->connection ) ) {
 				// connect to mongodb.
-				$m = new \MongoDB\Client();
+				$m = new \MongoDB\Client( DOCUMENTDB_URL );
 
 				// select database by blog id.
 				$db = $m->selectDatabase( 'wp' );
@@ -104,10 +104,11 @@ if ( ! class_exists( 'Save_Post' ) ) {
 				} else {
 					$mongo_posts = $this->connection->selectCollection( 'posts_' . get_current_blog_id() );
 				}
-				foreach ($mongo_posts->listIndexes() as $index) {
-					debug($index);
+				foreach ( $mongo_posts->listIndexes() as $index ) {
+					debug( $index );
 				}
-				/*$mongo_posts->createIndex(
+				/*
+				$mongo_posts->createIndex(
 					array(
 						'post_content.attrs.content' => 'text',
 						'post_title'                 => 'text',
