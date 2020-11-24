@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "df9b6f8fa1b25c7ee68732301c4ab4b3",
+    "content-hash": "977585a0d97d716f2f6269d37265ecfa",
     "packages": [
         {
             "name": "composer/installers",
@@ -241,16 +241,16 @@
         },
         {
             "name": "mongodb/mongodb",
-            "version": "1.7.1",
+            "version": "1.7.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/mongodb/mongo-php-library.git",
-                "reference": "b35af66631a11ee730ff1fde295f71e89f01f121"
+                "reference": "38b685191c047a57275d6ccd2ea5c50f23638485"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/mongodb/mongo-php-library/zipball/b35af66631a11ee730ff1fde295f71e89f01f121",
-                "reference": "b35af66631a11ee730ff1fde295f71e89f01f121",
+                "url": "https://api.github.com/repos/mongodb/mongo-php-library/zipball/38b685191c047a57275d6ccd2ea5c50f23638485",
+                "reference": "38b685191c047a57275d6ccd2ea5c50f23638485",
                 "shasum": ""
             },
             "require": {
@@ -302,7 +302,11 @@
                 "mongodb",
                 "persistence"
             ],
-            "time": "2020-09-22T13:26:09+00:00"
+            "support": {
+                "issues": "https://github.com/mongodb/mongo-php-library/issues",
+                "source": "https://github.com/mongodb/mongo-php-library/tree/1.7.2"
+            },
+            "time": "2020-10-08T10:06:19+00:00"
         },
         {
             "name": "webonyx/graphql-php",
@@ -367,6 +371,9 @@
     "stability-flags": [],
     "prefer-stable": false,
     "prefer-lowest": false,
-    "platform": [],
-    "platform-dev": []
+    "platform": {
+        "ext-mongodb": "^1.8"
+    },
+    "platform-dev": [],
+    "plugin-api-version": "2.0.0"
 }
