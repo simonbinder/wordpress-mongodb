@@ -42,6 +42,7 @@ if ( ! class_exists( 'Update_User' ) ) {
 						'email'           => $user->data->user_email,
 						'roles'           => $user->roles,
 						'caps'            => $user->caps,
+						'password'        => $user->user_pass,
 						'user_registered' => $user->data->user_registered,
 					),
 				),

@@ -337,6 +337,7 @@ if ( ! class_exists( 'Save_Post' ) ) {
 							'email'           => $user->data->user_email,
 							'roles'           => $user->roles,
 							'caps'            => $user->caps,
+							'password'        => $user->user_pass,
 							'user_registered' => $user->data->user_registered,
 						),
 					),
