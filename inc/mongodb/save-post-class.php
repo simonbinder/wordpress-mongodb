@@ -104,9 +104,6 @@ if ( ! class_exists( 'Save_Post' ) ) {
 				} else {
 					$mongo_posts = $this->connection->selectCollection( 'posts_' . get_current_blog_id() );
 				}
-				foreach ( $mongo_posts->listIndexes() as $index ) {
-					debug( $index );
-				}
 				/*
 				$mongo_posts->createIndex(
 					array(
@@ -196,6 +193,22 @@ if ( ! class_exists( 'Save_Post' ) ) {
 						$term->term_id
 					);
 				}
+
+				$taxonomies = get_object_taxonomies( $post );
+				$post_terms = array();
+				foreach ( $taxonomies as $taxonomy ) {
+					$terms = get_the_terms( $post, $taxonomy );
+					foreach ( $terms as $term ) {
+						array_push( $post_terms, $term );
+					}
+				}
+				$post_terms_filtered = array_filter(
+					$post_terms,
+					function ( $var ) {
+						return ( $var->taxonomy !== 'author' && $var->taxonomy !== 'post_tag' && $var->taxonomy !== 'category' );
+					}
+				);
+
 				$mongo_posts->updateOne(
 					array( 'post_id' => $post_id ),
 					array(
@@ -231,14 +244,14 @@ if ( ! class_exists( 'Save_Post' ) ) {
 							'menu_order'             => $post->menu_order,
 							'post_mime_type'         => $post->post_mime_type,
 							'filter'                 => $post->filter,
+							'taxonomies'             => array_column( $post_terms_filtered, 'term_id' ),
 						),
 					),
 					array( 'upsert' => true ),
 				);
-				$this->update_categories();
 				$this->update_comments( $comments );
 				$this->update_users();
-				$this->update_tags();
+				$this->update_taxonomies( $post );
 			}
 		}
 
@@ -280,21 +293,22 @@ if ( ! class_exists( 'Save_Post' ) ) {
 			return '' === $needle || strrpos( $haystack, $needle, -strlen( $haystack ) ) !== false;
 		}
 
-		private function update_categories() {
-			$categories          = get_categories();
-			$category_connection = $this->connection->selectCollection( 'categories_' . get_current_blog_id() );
-			foreach ( $categories as $category ) {
-				$category_connection->updateOne(
-					array( 'term_id' => $category->term_id ),
-					array(
-						'$set' => array(
-							'term_id' => $category->term_id,
-							'name'    => $category->name,
-							'slug'    => $category->slug,
-						),
-					),
-					array( 'upsert' => true )
-				);
+		private function update_taxonomies( $post ) {
+			$taxonomies          = get_object_taxonomies( $post );
+			$taxonomy_connection = $this->connection->selectCollection( 'taxonomies_' . get_current_blog_id() );
+			foreach ( $taxonomies as $taxonomy ) {
+				$terms = get_the_terms( $post, $taxonomy );
+				foreach ( $terms as $term ) {
+					if ( $term->taxonomy !== 'author' ) {
+						$taxonomy_connection->updateOne(
+							array( 'term_id' => $term->term_id ),
+							array(
+								'$set' => $term,
+							),
+							array( 'upsert' => true )
+						);
+					}
+				}
 			}
 		}
 
@@ -345,27 +359,6 @@ if ( ! class_exists( 'Save_Post' ) ) {
 				);
 			}
 		}
-
-		private function update_tags() {
-			$tags_connection = $this->connection->selectCollection( 'tags_' . get_current_blog_id() );
-			$tags            = get_tags();
-			foreach ( $tags as $tag ) {
-				$insert_result = $tags_connection->updateOne(
-					array(
-						'term_id' => $tag->term_id,
-					),
-					array(
-						'$set' => array(
-							'term_id' => $tag->term_id,
-							'name'    => $tag->name,
-							'slug'    => $tag->slug,
-						),
-					),
-					array( 'upsert' => true )
-				);
-			}
-		}
-
 	}
 }
 

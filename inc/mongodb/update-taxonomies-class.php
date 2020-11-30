@@ -18,7 +18,7 @@ if ( ! class_exists( 'Update_Taxonomies' ) ) {
 		 */
 		private $connection;
 
-		public function __construct($connection) {
+		public function __construct( $connection ) {
 			$this->connection = $connection;
 		}
 
@@ -26,27 +26,18 @@ if ( ! class_exists( 'Update_Taxonomies' ) ) {
 		 * @return mixed|void
 		 */
 		public function init_hooks() {
-			add_action( 'edited_term', array( $this, 'update_category' ), 10, 3 );
+			add_action( 'edited_term', array( $this, 'update_taxonomy' ), 10, 3 );
 			add_action( 'delete_term', array( $this, 'delete_term_from_db' ), 10, 3 );
 		}
 
-		public function update_category( $term_id, $tt_id, $taxonomy ) {
-			$collection_connection = null;
-			if ( $taxonomy === 'category' ) {
-				$collection_connection = $this->connection->selectCollection( 'categories_' . get_current_blog_id() );
-			} elseif ( $taxonomy === 'post_tag' ) {
-				$collection_connection = $this->connection->selectCollection( 'tags_' . get_current_blog_id() );
-			}
-			if ( $collection_connection ) {
+		public function update_taxonomy($term_id, $tt_id, $taxonomy ) {
+			$taxonomy_connection = $this->connection->selectCollection( 'taxonomies_' . get_current_blog_id() );
+			if ( $taxonomy_connection ) {
 				$term = get_term( $term_id, $taxonomy );
-				$collection_connection->updateOne(
+				$taxonomy_connection->updateOne(
 					array( 'term_id' => $term->term_id ),
 					array(
-						'$set' => array(
-							'term_id' => $term->term_id,
-							'name'    => $term->name,
-							'slug'    => $term->slug,
-						),
+						'$set' => $taxonomy
 					),
 					array( 'upsert' => true )
 				);
@@ -54,17 +45,10 @@ if ( ! class_exists( 'Update_Taxonomies' ) ) {
 		}
 
 		public function delete_term_from_db( $term_id, $tt_id, $taxonomy ) {
-			$collection_connection = null;
-			if ( $taxonomy === 'category' ) {
-				$collection_connection = $this->connection->selectCollection( 'categories_' . get_current_blog_id() );
-			} elseif ( $taxonomy === 'post_tag' ) {
-				$collection_connection = $this->connection->selectCollection( 'tags_' . get_current_blog_id() );
-			}
-			if ( $collection_connection ) {
-				$collection_connection->deleteOne(
-					array( 'term_id' => $term_id )
-				);
-			}
+			$taxonomy_connection = $this->connection->selectCollection( 'taxonomies_' . get_current_blog_id() );
+			$taxonomy_connection->deleteOne(
+				array( 'term_id' => $term_id )
+			);
 			$mongo_posts = $this->connection->posts;
 			if ( $taxonomy === 'category' ) {
 				$mongo_posts->updateMany(
@@ -74,7 +58,7 @@ if ( ! class_exists( 'Update_Taxonomies' ) ) {
 			} elseif ( $taxonomy === 'post_tag' ) {
 				$mongo_posts->updateMany(
 					array(),
-					array( '$pull' => array( 'tags' => $term_id ) )
+					array( '$pull' => array( 'post_tag' => $term_id ) )
 				);
 			}
 		}
