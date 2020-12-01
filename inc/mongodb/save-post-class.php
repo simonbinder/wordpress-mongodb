@@ -23,7 +23,13 @@ if ( ! class_exists( 'Save_Post' ) ) {
 		public function __construct() {
 			if ( is_null( $this->connection ) ) {
 				// connect to mongodb.
-				$m = new \MongoDB\Client( DOCUMENTDB_URL );
+				$m = new \MongoDB\Client(
+					DOCUMENTDB_URL,
+					DOCUMENTDB_USERNAME ? array(
+						'username' => rawurlencode( DOCUMENTDB_USERNAME ),
+						'password' => rawurlencode( DOCUMENTDB_PASSWORD ),
+					) : array()
+				);
 
 				// select database by blog id.
 				$db = $m->selectDatabase( 'wp' );
