@@ -12,7 +12,5 @@ temp/
 wwlog/
 wwtemp/
 
-/vendor/
-
 test-report.xml
 coverage-report.clover
