@@ -247,7 +247,7 @@ if ( ! class_exists( 'Save_Post' ) ) {
 							'taxonomies'             => array_column( $post_terms_filtered, 'term_id' ),
 						),
 					),
-					array( 'upsert' => true ),
+					array( 'upsert' => true )
 				);
 				$this->update_comments( $comments );
 				$this->update_users();
