@@ -19,21 +19,24 @@ if ( ! class_exists( 'Save_Post' ) ) {
 		 */
 		private $connection;
 
-
 		public function __construct() {
 			if ( is_null( $this->connection ) ) {
+				$SSL_DIR  = '/home/ec2-user';
+				$SSL_FILE = 'rds-combined-ca-bundle.pem';
+
 				// connect to mongodb.
 				$m = new \MongoDB\Client(
 					DOCUMENTDB_URL,
 					DOCUMENTDB_USERNAME ? array(
-						'username' => rawurlencode( DOCUMENTDB_USERNAME ),
-						'password' => rawurlencode( DOCUMENTDB_PASSWORD ),
-					) : array()
+						'username'  => rawurlencode( DOCUMENTDB_USERNAME ),
+						'password'  => rawurlencode( DOCUMENTDB_PASSWORD ),
+						'ssl'       => true,
+						'tlsCAFile' => $SSL_DIR . '/' . $SSL_FILE,
+					) : array(),
 				);
 
 				// select database by blog id.
-				$db = $m->selectDatabase( 'wp' );
-
+				$db               = $m->selectDatabase( 'wp' );
 				$this->connection = $db;
 
 				$update_comments = new Update_Comments( $this->connection );
