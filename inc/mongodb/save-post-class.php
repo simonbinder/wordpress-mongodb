@@ -32,7 +32,7 @@ if ( ! class_exists( 'Save_Post' ) ) {
 						'password'  => rawurlencode( DOCUMENTDB_PASSWORD ),
 						'ssl'       => true,
 						'tlsCAFile' => $SSL_DIR . '/' . $SSL_FILE,
-					) : array(),
+					) : array()
 				);
 
 				// select database by blog id.
