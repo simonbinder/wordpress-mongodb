@@ -21,7 +21,7 @@ if ( ! class_exists( 'Save_Post' ) ) {
 
 		public function __construct() {
 			if ( is_null( $this->connection ) ) {
-				$SSL_DIR  = '/home/ec2-user';
+				$SSL_DIR  = '/etc/ssl/certs';
 				$SSL_FILE = 'rds-combined-ca-bundle.pem';
 
 				// connect to mongodb.
