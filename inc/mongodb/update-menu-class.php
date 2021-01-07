@@ -18,7 +18,7 @@ if ( ! class_exists( 'Update_Menu' ) ) {
 		 */
 		private $connection;
 
-		public function __construct($connection) {
+		public function __construct( $connection ) {
 			$this->connection = $connection;
 		}
 
@@ -32,23 +32,25 @@ if ( ! class_exists( 'Update_Menu' ) ) {
 		public function save_menu( $menu_id ) {
 			$menu            = wp_get_nav_menu_object( $menu_id );
 			$items           = wp_get_nav_menu_items( $menu_id );
-			$menu_connection = $this->connection->selectCollection( 'menus_' . get_current_blog_id() );
+			$menu_connection = $this->connection->selectCollection( 'menus' );
 			$menu_connection->updateOne(
-				array( 'menu_id' => $menu->term_id ),
+				array( 'source_menu_id' => get_current_blog_id() . '_' . $menu->term_id ),
 				array(
 					'$set' => array(
-						'menu_id'    => $menu->term_id,
-						'name'       => $menu->name,
-						'slug'       => $menu->slug,
-						'menu_items' => array_column( $items, 'ID' ),
+						'menu_id'      => $menu->term_id,
+						'source_menu_id' => get_current_blog_id() . '_' . $menu->term_id,
+						'name'         => $menu->name,
+						'slug'         => $menu->slug,
+						'menu_items'   => array_column( $items, 'ID' ),
 					),
 				),
 				array( 'upsert' => true )
 			);
-			$menu_items_connection = $this->connection->selectCollection( 'menuItems_' . get_current_blog_id() );
+			$menu_items_connection = $this->connection->selectCollection( 'menuItems' );
 			foreach ( $items as $item ) {
+				$item['source_menu_items_id'] = get_current_blog_id() . '_' . $item->ID;
 				$menu_items_connection->updateOne(
-					array( 'ID' => $item->ID ),
+					array( 'source_menu_items_id' => get_current_blog_id() . '_' . $item->ID ),
 					array(
 						'$set' => $item,
 					),

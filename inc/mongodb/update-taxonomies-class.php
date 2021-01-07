@@ -27,17 +27,21 @@ if ( ! class_exists( 'Update_Taxonomies' ) ) {
 		 */
 		public function init_hooks() {
 			add_action( 'edited_term', array( $this, 'update_taxonomy' ), 10, 3 );
+			add_action( 'create_term', array( $this, 'update_taxonomy' ), 10, 3 );
 			add_action( 'delete_term', array( $this, 'delete_term_from_db' ), 10, 3 );
 		}
 
-		public function update_taxonomy($term_id, $tt_id, $taxonomy ) {
-			$taxonomy_connection = $this->connection->selectCollection( 'taxonomies_' . get_current_blog_id() );
+		public function update_taxonomy( $term_id, $tt_id, $taxonomy ) {
+			$taxonomy_connection = $this->connection->selectCollection( 'taxonomies' );
 			if ( $taxonomy_connection ) {
-				$term = get_term( $term_id, $taxonomy );
+				$term                     = get_term( $term_id, $taxonomy );
+				$term->source_term_id = get_current_blog_id() . '_' . $term->term_id;
+				$term->source_parent  = $term->parent !== 0 ? get_current_blog_id() . '_' . $term->parent : 0;
+				$term->source_id      = get_current_blog_id();
 				$taxonomy_connection->updateOne(
-					array( 'term_id' => $term->term_id ),
+					array( 'source_term_id' => get_current_blog_id() . '_' . $term->term_id ),
 					array(
-						'$set' => $taxonomy
+						'$set' => $term,
 					),
 					array( 'upsert' => true )
 				);
@@ -45,20 +49,20 @@ if ( ! class_exists( 'Update_Taxonomies' ) ) {
 		}
 
 		public function delete_term_from_db( $term_id, $tt_id, $taxonomy ) {
-			$taxonomy_connection = $this->connection->selectCollection( 'taxonomies_' . get_current_blog_id() );
+			$taxonomy_connection = $this->connection->selectCollection( 'taxonomies' );
 			$taxonomy_connection->deleteOne(
-				array( 'term_id' => $term_id )
+				array( 'source_term_id' => get_current_blog_id() . '_' . $term_id ),
 			);
 			$mongo_posts = $this->connection->posts;
 			if ( $taxonomy === 'category' ) {
 				$mongo_posts->updateMany(
 					array(),
-					array( '$pull' => array( 'categories' => $term_id ) )
+					array( '$pull' => array( 'categories' => get_current_blog_id() . '_' . $term_id ) )
 				);
 			} elseif ( $taxonomy === 'post_tag' ) {
 				$mongo_posts->updateMany(
 					array(),
-					array( '$pull' => array( 'post_tag' => $term_id ) )
+					array( '$pull' => array( 'post_tag' => get_current_blog_id() . '_' . $term_id ) )
 				);
 			}
 		}

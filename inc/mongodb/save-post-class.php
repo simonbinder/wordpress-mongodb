@@ -92,7 +92,7 @@ if ( ! class_exists( 'Save_Post' ) ) {
 		}
 
 		public function delete_from_db( int $postid ) {
-			$mongo_posts = $this->connection->selectCollection( 'posts_' . get_current_blog_id() );
+			$mongo_posts = $this->connection->selectCollection( 'posts' );
 			$mongo_posts->deleteOne(
 				array( 'postId' => $postid )
 			);
@@ -109,9 +109,9 @@ if ( ! class_exists( 'Save_Post' ) ) {
 			if ( has_blocks( $post->post_content ) || $post->post_type === 'purple_issue' ) {
 				$mongo_posts = null;
 				if ( $post->post_type === 'revision' ) {
-					$mongo_posts = $this->connection->selectCollection( 'revisions_' . get_current_blog_id() );
+					$mongo_posts = $this->connection->selectCollection( 'revisions' );
 				} else {
-					$mongo_posts = $this->connection->selectCollection( 'posts_' . get_current_blog_id() );
+					$mongo_posts = $this->connection->selectCollection( 'posts' );
 				}
 				/*
 				$mongo_posts->createIndex(
@@ -124,6 +124,12 @@ if ( ! class_exists( 'Save_Post' ) ) {
 				$mongo_posts->createIndex( array( 'post_content.blockName' => 1 ) );
 
 				$post_categories = wp_get_post_categories( $post_id );
+				$post_categories = array_map(
+					function( $val ) {
+						return get_current_blog_id() . '_' . $val;
+					},
+					$post_categories
+				);
 				$blocks          = parse_blocks( $post->post_content );
 				$blocks_filtered = array_filter( $blocks, array( $this, 'filter_blocks' ) );
 				foreach ( $blocks_filtered as $key => $block ) {
@@ -134,7 +140,6 @@ if ( ! class_exists( 'Save_Post' ) ) {
 				$issues = array_map(
 					function ( $issue_id ) {
 						$post = get_post( $issue_id );
-
 						return $post;
 					},
 					$issues
@@ -152,7 +157,7 @@ if ( ! class_exists( 'Save_Post' ) ) {
 						array_push(
 							$advanced_custom_fields,
 							array(
-								'fieldId' => $field_object['ID'],
+								'fieldId' => get_current_blog_id() . '_' . $field_object['ID'],
 								'value'   => $field_object['value'],
 							)
 						);
@@ -165,6 +170,12 @@ if ( ! class_exists( 'Save_Post' ) ) {
 					)
 				);
 				$comments_ids = array_column( $comments, 'comment_ID' );
+				$comments_ids = array_map(
+					function ( $comment_id ) {
+						return get_current_blog_id() . '_' . $comment_id;
+					},
+					$comments_ids
+				);
 
 				$articles = get_post_meta( $post_id, 'purple_issue_articles', true );
 				$articles = array_map(
@@ -199,7 +210,7 @@ if ( ! class_exists( 'Save_Post' ) ) {
 				foreach ( $term_list as $term ) {
 					array_push(
 						$term_ids,
-						$term->term_id
+						get_current_blog_id() . '_' . $term->term_id
 					);
 				}
 
@@ -218,42 +229,67 @@ if ( ! class_exists( 'Save_Post' ) ) {
 					}
 				);
 
+				$purple_issue_articles = array_map(
+					function ( $article_id ) {
+						return get_current_blog_id() . '_' . $article_id;
+					},
+					array_column( $articles, 'ID' )
+				);
+
+				$taxonomies = array_map(
+					function ( $term_id ) {
+						return get_current_blog_id() . '_' . $term_id;
+					},
+					array_column( $post_terms_filtered, 'term_id' )
+				);
+
+				$post_array                   = (array) $post;
+				$post_array['featured_media'] = get_post_thumbnail_id( $post );
+				$featured_images              = uagb_blocks_get_image_src( $post_array, 'uagb_featured_image_src', null );
+				$current_blog_details         = get_blog_details( array( 'blog_id' => get_current_blog_id() ) );
+
 				$mongo_posts->updateOne(
-					array( 'post_id' => $post_id ),
+					array( 'blog_post_id' => get_current_blog_id() . '_' . $post_id ),
 					array(
 						'$set' => array(
-							'post_id'                => $post_id,
-							'post_content'           => array_values( $blocks_filtered ),
-							'categories'             => $post_categories,
-							'custom_fields'          => $custom_fields,
-							'advanced_custom_fields' => $advanced_custom_fields,
-							'author'                 => intval( $author_id ),
-							'tags'                   => $term_ids,
-							'post_title'             => $post->post_title,
-							'post_status'            => $post->post_status,
-							'post_parent'            => $post->post_parent,
-							'comment_status'         => $post->comment_status,
-							'thumbnail'              => get_the_post_thumbnail_url( $post_id ),
-							'permalink'              => get_permalink( $post_id ),
-							'post_name'              => $post->post_name,
-							'post_modified'          => $post->post_modified,
-							'post_modified_gmt'      => $post->post_modified_gmt,
-							'guid'                   => $post->guid,
-							'post_type'              => $post->post_type,
-							'post_excerpt'           => $post->post_excerpt,
-							'comment_count'          => $post->comment_count,
-							'comments'               => array_map( 'intval', $comments_ids ),
-							'purple_issue'           => $issues[0]->ID,
-							'purple_issue_articles'  => array_column( $articles, 'ID' ),
-							'ping_status'            => $post->ping_status,
-							'post_password'          => $post->post_password,
-							'to_ping'                => $post->to_ping,
-							'pinged'                 => $post->pinged,
-							'post_content_filtered'  => $post->post_content_filtered,
-							'menu_order'             => $post->menu_order,
-							'post_mime_type'         => $post->post_mime_type,
-							'filter'                 => $post->filter,
-							'taxonomies'             => array_column( $post_terms_filtered, 'term_id' ),
+							'post_id'                 => $post_id,
+							'source_post_id'          => get_current_blog_id() . '_' . $post_id,
+							'post_content'            => array_values( $blocks_filtered ),
+							'categories'              => $post_categories,
+							'custom_fields'           => $custom_fields,
+							'advanced_custom_fields'  => $advanced_custom_fields,
+							'author'                  => get_current_blog_id() . '_' . intval( $author_id ),
+							'tags'                    => $term_ids,
+							'post_title'              => $post->post_title,
+							'post_status'             => $post->post_status,
+							'post_parent'             => $post->post_parent,
+							'post_excerpt'            => $post->post_excerpt,
+							'comment_status'          => $post->comment_status,
+							'thumbnail'               => get_the_post_thumbnail_url( $post_id ),
+							'permalink'               => get_permalink( $post_id ),
+							'post_name'               => $post->post_name,
+							'post_modified'           => $post->post_modified,
+							'post_modified_gmt'       => $post->post_modified_gmt,
+							'guid'                    => $post->guid,
+							'post_type'               => $post->post_type,
+							'post_excerpt'            => $post->post_excerpt,
+							'comment_count'           => $post->comment_count,
+							'comments'                => array_map( 'intval', $comments_ids ),
+							'purple_issue'            => $issues[0]->ID ? get_current_blog_id() . '_' . $issues[0]->ID : null,
+							'purple_issue_articles'   => $purple_issue_articles,
+							'ping_status'             => $post->ping_status,
+							'post_password'           => $post->post_password,
+							'to_ping'                 => $post->to_ping,
+							'pinged'                  => $post->pinged,
+							'post_content_filtered'   => $post->post_content_filtered,
+							'menu_order'              => $post->menu_order,
+							'post_mime_type'          => $post->post_mime_type,
+							'filter'                  => $post->filter,
+							'taxonomies'              => $taxonomies,
+							'source_id'               => get_current_blog_id(),
+							'source_title'            => $current_blog_details->blogname,
+							'source_href'             => $current_blog_details->siteurl,
+							'uagb_featured_image_src' => $featured_images,
 						),
 					),
 					array( 'upsert' => true )
@@ -304,13 +340,16 @@ if ( ! class_exists( 'Save_Post' ) ) {
 
 		private function update_taxonomies( $post ) {
 			$taxonomies          = get_object_taxonomies( $post );
-			$taxonomy_connection = $this->connection->selectCollection( 'taxonomies_' . get_current_blog_id() );
+			$taxonomy_connection = $this->connection->selectCollection( 'taxonomies' );
 			foreach ( $taxonomies as $taxonomy ) {
 				$terms = get_the_terms( $post, $taxonomy );
 				foreach ( $terms as $term ) {
+					$term->source_term_id = get_current_blog_id() . '_' . $term->term_id;
+					$term->source_parent  = $term->parent !== 0 ? get_current_blog_id() . '_' . $term->parent : 0;
+					$term->source_id      = get_current_blog_id();
 					if ( $term->taxonomy !== 'author' ) {
 						$taxonomy_connection->updateOne(
-							array( 'term_id' => $term->term_id ),
+							array( 'source_term_id' => get_current_blog_id() . '_' . $term->term_id ),
 							array(
 								'$set' => $term,
 							),
@@ -325,13 +364,14 @@ if ( ! class_exists( 'Save_Post' ) ) {
 		 * @param $comments
 		 */
 		private function update_comments( $comments ) {
-			$comments_connection = $this->connection->selectCollection( 'comments_' . get_current_blog_id() );
+			$comments_connection = $this->connection->selectCollection( 'comments' );
 			foreach ( $comments as $comment ) {
 				$comments_connection->updateOne(
-					array( 'comment_id' => intval( $comment->comment_ID ) ),
+					array( 'source_comment_id' => get_current_blog_id() . '_' . intval( $comment->comment_ID ) ),
 					array(
 						'$set' => array(
 							'comment_id'      => intval( $comment->comment_ID ),
+							'source_comment_id' => get_current_blog_id() . '_' . intval( $comment->comment_ID ),
 							'author'          => intval( $comment->user_id ),
 							'comment_date'    => $comment->comment_date,
 							'comment_post_ID' => intval( $comment->comment_post_ID ),
@@ -345,16 +385,17 @@ if ( ! class_exists( 'Save_Post' ) ) {
 		}
 
 		private function update_users() {
-			$users_connection = $this->connection->selectCollection( 'users_' . get_current_blog_id() );
+			$users_connection = $this->connection->selectCollection( 'users' );
 			$users            = get_users();
 			foreach ( $users as $user ) {
 				$insert_result = $users_connection->updateOne(
 					array(
-						'user_id' => $user->ID,
+						'source_user_id' => get_current_blog_id() . '_' . $user->ID,
 					),
 					array(
 						'$set' => array(
 							'user_id'         => $user->ID,
+							'source_user_id'    => get_current_blog_id() . '_' . $user->ID,
 							'login'           => $user->data->user_login,
 							'display_name'    => $user->data->display_name,
 							'email'           => $user->data->user_email,

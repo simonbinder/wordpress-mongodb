@@ -33,10 +33,11 @@ if ( ! class_exists( 'Update_User' ) ) {
 			$user_connection = $this->connection->selectCollection( 'users_' . get_current_blog_id() );
 			$user            = get_user_by( 'id', $user_id );
 			$user_connection->updateOne(
-				array( 'user_id' => $user_id ),
+				array( 'source_user_id' => get_current_blog_id() . '_' . $user->ID ),
 				array(
 					'$set' => array(
 						'user_id'         => $user->ID,
+						'source_user_id'  => get_current_blog_id() . '_' . $user->ID,
 						'login'           => $user->data->user_login,
 						'display_name'    => $user->data->display_name,
 						'email'           => $user->data->user_email,

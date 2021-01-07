@@ -35,11 +35,12 @@ if ( ! class_exists( 'Update_Acf' ) ) {
 		}
 
 		public function update_acf( $field_group ) {
-			$fields = acf_get_fields_by_id($field_group['ID']);
-			$field_group['fields'] = $fields;
-			$advanced_custom_fields_connection = $this->connection->selectCollection( 'advanced_custom_fields_' . get_current_blog_id() );
+			$fields                            = acf_get_fields_by_id( $field_group['ID'] );
+			$field_group['fields']             = $fields;
+			$advanced_custom_fields_connection = $this->connection->selectCollection( 'advanced_custom_fields' );
+			$field_group['source_acf_id']        = get_current_blog_id() . '_' . $field_group['ID'];
 			$advanced_custom_fields_connection->updateOne(
-				array( 'ID' => $field_group['ID'] ),
+				array( 'source_acf_id' => get_current_blog_id() . '_' . $field_group['ID'] ),
 				array(
 					'$set' => $field_group,
 				),
