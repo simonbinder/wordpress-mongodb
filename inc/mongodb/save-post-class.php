@@ -94,10 +94,10 @@ if ( ! class_exists( 'Save_Post' ) ) {
 		public function delete_from_db( int $postid ) {
 			$mongo_posts = $this->connection->selectCollection( 'posts' );
 			$mongo_posts->deleteOne(
-				array( 'postId' => $postid )
+				array( 'source_post_id' => get_current_blog_id() . '_' . $postid )
 			);
 			$mongo_posts->deleteMany(
-				array( 'post_parent' => $postid )
+				array( 'post_parent' => get_current_blog_id() . '_' .$postid )
 			);
 		}
 
@@ -249,7 +249,7 @@ if ( ! class_exists( 'Save_Post' ) ) {
 				$current_blog_details         = get_blog_details( array( 'blog_id' => get_current_blog_id() ) );
 
 				$mongo_posts->updateOne(
-					array( 'blog_post_id' => get_current_blog_id() . '_' . $post_id ),
+					array( 'source_post_id' => get_current_blog_id() . '_' . $post_id ),
 					array(
 						'$set' => array(
 							'post_id'                 => $post_id,
