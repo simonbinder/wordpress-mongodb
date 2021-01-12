@@ -51,7 +51,7 @@ if ( ! class_exists( 'Update_Taxonomies' ) ) {
 		public function delete_term_from_db( $term_id, $tt_id, $taxonomy ) {
 			$taxonomy_connection = $this->connection->selectCollection( 'taxonomies' );
 			$taxonomy_connection->deleteOne(
-				array( 'source_term_id' => get_current_blog_id() . '_' . $term_id ),
+				array( 'source_term_id' => get_current_blog_id() . '_' . $term_id )
 			);
 			$mongo_posts = $this->connection->posts;
 			if ( $taxonomy === 'category' ) {
