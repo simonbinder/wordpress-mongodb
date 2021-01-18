@@ -67,15 +67,18 @@ if ( ! class_exists( 'Save_Post' ) ) {
 		}
 
 		public function add_purple_id( $data, $postarr ) {
-			$blocks          = parse_blocks( stripslashes( $postarr['post_content'] ) );
-			$blocks_filtered = array_filter( $blocks, array( $this, 'filter_blocks' ) );
-			$matches         = null;
-			foreach ( $blocks_filtered as $key => $block ) {
-				if ( $block['attrs']['purpleId'] === null ) {
-					$blocks_filtered = $this->add_content_attr( $block['innerHTML'], $blocks_filtered, $key, true );
+			$post   = get_post( $postarr['ID'] );
+			$is_rss = in_array( 'rss', array_column( get_the_terms( $post, 'post_tag' ), 'slug' ), true );
+			if ( ! $is_rss ) {
+				$blocks          = parse_blocks( stripslashes( $postarr['post_content'] ) );
+				$blocks_filtered = array_filter( $blocks, array( $this, 'filter_blocks' ) );
+				foreach ( $blocks_filtered as $key => $block ) {
+					if ( $block['attrs']['purpleId'] === null ) {
+						$blocks_filtered = $this->add_content_attr( $block['innerHTML'], $blocks_filtered, $key, true );
+					}
 				}
+				$data['post_content'] = addslashes( serialize_blocks( $blocks_filtered ) );
 			}
-			$data['post_content'] = addslashes( serialize_blocks( $blocks_filtered ) );
 			return $data;
 		}
 

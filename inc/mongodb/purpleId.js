@@ -3,13 +3,15 @@
         'blocks.registerBlockType',
         'purpleId/idAttribute',
         (settings, name) => {
-            settings.attributes = {
-                ...settings.attributes,
-                purpleId: {
-                    type: 'string',
-                    default: 'test',
-                },
-            };
+            if(name !== 'core/freeform') {
+                settings.attributes = {
+                    ...settings.attributes,
+                    purpleId: {
+                        type: 'string',
+                        default: 'test',
+                    },
+                };
+            }
             return settings;
         }
     );
