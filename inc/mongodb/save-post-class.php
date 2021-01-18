@@ -97,7 +97,7 @@ if ( ! class_exists( 'Save_Post' ) ) {
 				array( 'source_post_id' => get_current_blog_id() . '_' . $postid )
 			);
 			$mongo_posts->deleteMany(
-				array( 'post_parent' => get_current_blog_id() . '_' .$postid )
+				array( 'post_parent' => get_current_blog_id() . '_' . $postid )
 			);
 		}
 
@@ -106,7 +106,8 @@ if ( ! class_exists( 'Save_Post' ) ) {
 		}
 
 		public function save_in_db( $post_id, \WP_Post $post, $update ) {
-			if ( has_blocks( $post->post_content ) || $post->post_type === 'purple_issue' ) {
+			$is_rss = in_array( 'rss', array_column( get_the_terms( $post, 'post_tag' ), 'slug' ), true );
+			if ( ( has_blocks( $post->post_content ) || $post->post_type === 'purple_issue' ) && ! $is_rss ) {
 				$mongo_posts = null;
 				if ( $post->post_type === 'revision' ) {
 					$mongo_posts = $this->connection->selectCollection( 'revisions' );
@@ -329,7 +330,6 @@ if ( ! class_exists( 'Save_Post' ) ) {
 					$blocks_filtered[ $key ]['innerBlocks'] = $this->add_content_attr( $block['innerHTML'], $blocks_filtered[ $key ]['innerBlocks'], $key2 );
 				}
 			}
-
 			return $blocks_filtered;
 		}
 
@@ -370,13 +370,13 @@ if ( ! class_exists( 'Save_Post' ) ) {
 					array( 'source_comment_id' => get_current_blog_id() . '_' . intval( $comment->comment_ID ) ),
 					array(
 						'$set' => array(
-							'comment_id'      => intval( $comment->comment_ID ),
+							'comment_id'        => intval( $comment->comment_ID ),
 							'source_comment_id' => get_current_blog_id() . '_' . intval( $comment->comment_ID ),
-							'author'          => intval( $comment->user_id ),
-							'comment_date'    => $comment->comment_date,
-							'comment_post_ID' => intval( $comment->comment_post_ID ),
-							'text'            => get_comment_text( $comment->comment_ID ),
-							'status'          => wp_get_comment_status( $comment->comment_ID ),
+							'author'            => intval( $comment->user_id ),
+							'comment_date'      => $comment->comment_date,
+							'comment_post_ID'   => intval( $comment->comment_post_ID ),
+							'text'              => get_comment_text( $comment->comment_ID ),
+							'status'            => wp_get_comment_status( $comment->comment_ID ),
 						),
 					),
 					array( 'upsert' => true )
@@ -395,7 +395,7 @@ if ( ! class_exists( 'Save_Post' ) ) {
 					array(
 						'$set' => array(
 							'user_id'         => $user->ID,
-							'source_user_id'    => get_current_blog_id() . '_' . $user->ID,
+							'source_user_id'  => get_current_blog_id() . '_' . $user->ID,
 							'login'           => $user->data->user_login,
 							'display_name'    => $user->data->display_name,
 							'email'           => $user->data->user_email,
