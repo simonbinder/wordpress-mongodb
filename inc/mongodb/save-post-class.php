@@ -36,7 +36,7 @@ if ( ! class_exists( 'Save_Post' ) ) {
 				);
 
 				// select database by blog id.
-				$db               = $m->selectDatabase( 'wp' );
+				$db               = $m->selectDatabase( 'wp_' . DOCUMENTDB_STAGE );
 				$this->connection = $db;
 
 				$update_comments = new Update_Comments( $this->connection );
