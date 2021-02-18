@@ -3,6 +3,7 @@
 namespace NoSQL\Inc\Mongodb;
 
 use PurpleDsHub\Inc\Interfaces\Hooks_Interface;
+use PurpleDsHub\Inc\Utilities\General_Utilities;
 use \PurpleDsHub\Inc\Utilities\Torque_Urls;
 
 if ( ! class_exists( 'Save_Post' ) ) {
@@ -199,6 +200,22 @@ if ( ! class_exists( 'Save_Post' ) ) {
 					$articles
 				);
 
+				$post_content_html = '';
+				if ( get_post_meta( $post_id, 'sprylab_purple_post_app_package' ) ) {
+					$path = $this->get_app_package_path( $post_id );
+					$d    = new \DOMDocument();
+					$mock = new \DOMDocument();
+					$d->loadHTML( file_get_contents( $path ) );
+					$body = $d->getElementsByTagName( 'body' )->item( 0 );
+					foreach ( $body->childNodes as $child ) {
+						$mock->appendChild( $mock->importNode( $child, true ) );
+					}
+
+					$post_content_html = $mock->saveHTML();
+				} else {
+					$post_content_html = apply_filters( 'the_content', $post->post_content );
+				}
+
 				$custom_fields = array();
 				$post_meta     = get_post_meta( $post_id, '', true );
 				foreach ( $post_meta as $meta_key => $meta_value ) {
@@ -299,7 +316,7 @@ if ( ! class_exists( 'Save_Post' ) ) {
 							'source_title'            => $current_blog_details->blogname,
 							'source_href'             => $current_blog_details->siteurl,
 							'uagb_featured_image_src' => $featured_images,
-							'post_content_html'       => apply_filters( 'the_content', $post->post_content ),
+							'post_content_html'       => $post_content_html,
 						),
 					),
 					array( 'upsert' => true )
@@ -307,6 +324,32 @@ if ( ! class_exists( 'Save_Post' ) ) {
 				$this->update_comments( $comments );
 				$this->update_users();
 				$this->update_taxonomies( $post );
+			}
+		}
+
+		private function get_app_package_path( $post_id ) {
+			global $blog_id;
+			$path = '';
+
+			if ( is_multisite() ) {
+				$path = ABSPATH . 'wp-content/uploads/sites/' . $blog_id . '/importzip/' . $post_id . '/' . $post_id . '.zip';
+			} else {
+				$path = ABSPATH . 'wp-content/uploads/importzip/' . $post_id . '/' . $post_id . '.zip';
+			}
+			$zip_file_path = General_Utilities::sprylab_purple_get_user_zip_path() . '/' . get_the_ID();
+			if ( ! file_exists( $zip_file_path ) ) {
+				mkdir( $zip_file_path, 0777, true );
+			}
+
+			$zip = new \ZipArchive();
+			if ( $zip->open( $path ) === true ) {
+				$zip->extractTo( $zip_file_path );
+				$zip->close();
+				$files = glob( $zip_file_path . "/content/*.html" );
+				$file  = basename( $files[0] );
+				return get_site_url() .'/wp-content/uploads/temp/'. General_Utilities::sprylab_purple_prefix_user() . '/' . get_the_ID()  . '/content/' . $file;
+			} else {
+				return '';
 			}
 		}
 
