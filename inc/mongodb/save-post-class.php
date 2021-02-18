@@ -110,7 +110,7 @@ if ( ! class_exists( 'Save_Post' ) ) {
 
 		public function save_in_db( $post_id, \WP_Post $post, $update ) {
 			$is_rss = $post->post_type === 'rss_feed';
-			if ( ( has_blocks( $post->post_content ) || $post->post_type === 'purple_issue' ) && ! $is_rss ) {
+			if ( ! $is_rss ) {
 				$mongo_posts = null;
 				if ( $post->post_type === 'revision' ) {
 					$mongo_posts = $this->connection->selectCollection( 'revisions' );
