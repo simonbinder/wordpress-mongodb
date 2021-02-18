@@ -68,7 +68,7 @@ if ( ! class_exists( 'Save_Post' ) ) {
 
 		public function add_purple_id( $data, $postarr ) {
 			$post   = get_post( $postarr['ID'] );
-			$is_rss = in_array( 'rss', array_column( get_the_terms( $post, 'post_tag' ), 'slug' ), true );
+			$is_rss = $post->post_type === 'rss_feed';
 			if ( ! $is_rss ) {
 				$blocks          = parse_blocks( stripslashes( $postarr['post_content'] ) );
 				$blocks_filtered = array_filter( $blocks, array( $this, 'filter_blocks' ) );
@@ -109,7 +109,7 @@ if ( ! class_exists( 'Save_Post' ) ) {
 		}
 
 		public function save_in_db( $post_id, \WP_Post $post, $update ) {
-			$is_rss = in_array( 'rss', array_column( get_the_terms( $post, 'post_tag' ), 'slug' ), true );
+			$is_rss = $post->post_type === 'rss_feed';
 			if ( ( has_blocks( $post->post_content ) || $post->post_type === 'purple_issue' ) && ! $is_rss ) {
 				$mongo_posts = null;
 				if ( $post->post_type === 'revision' ) {
