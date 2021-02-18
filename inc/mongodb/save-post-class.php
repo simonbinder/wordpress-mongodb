@@ -155,6 +155,11 @@ if ( ! class_exists( 'Save_Post' ) ) {
 					'advanced-custom-fields/acf.php',
 					apply_filters( 'active_plugins', get_option( 'active_plugins' ) ),
 					true
+				) ||
+				in_array(
+					'advanced-custom-fields-pro/acf.php',
+					apply_filters( 'active_plugins', get_option( 'active_plugins' ) ),
+					true
 				)
 				) {
 					foreach ( get_field_objects( $post_id ) as $field_object ) {
