@@ -294,6 +294,7 @@ if ( ! class_exists( 'Save_Post' ) ) {
 							'source_title'            => $current_blog_details->blogname,
 							'source_href'             => $current_blog_details->siteurl,
 							'uagb_featured_image_src' => $featured_images,
+							'content_html'            => apply_filters( 'the_content', $post->post_content ),
 						),
 					),
 					array( 'upsert' => true )
