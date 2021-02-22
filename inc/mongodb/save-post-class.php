@@ -208,7 +208,9 @@ if ( ! class_exists( 'Save_Post' ) ) {
 					$d->loadHTML( file_get_contents( $path ) );
 					$body = $d->getElementsByTagName( 'body' )->item( 0 );
 					foreach ( $body->childNodes as $child ) {
-						$mock->appendChild( $mock->importNode( $child, true ) );
+						if ( $child->tagName !== 'script' ) {
+							$mock->appendChild( $mock->importNode( $child, true ) );
+						}
 					}
 
 					$post_content_html = $mock->saveHTML();
