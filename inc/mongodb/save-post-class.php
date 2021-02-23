@@ -69,7 +69,7 @@ if ( ! class_exists( 'Save_Post' ) ) {
 
 		public function add_purple_id( $data, $postarr ) {
 			$post   = get_post( $postarr['ID'] );
-			$is_rss = $post->post_type === 'rss_feed';
+			$is_rss = $post->post_type == 'rss_feed';
 			if ( ! $is_rss ) {
 				$blocks          = parse_blocks( stripslashes( $postarr['post_content'] ) );
 				$blocks_filtered = array_filter( $blocks, array( $this, 'filter_blocks' ) );
@@ -85,7 +85,6 @@ if ( ! class_exists( 'Save_Post' ) ) {
 
 		public function update_all_posts() {
 			$args      = array(
-				'post_type'   => 'purple_issue',
 				'numberposts' => -1,
 			);
 			$all_posts = get_posts( $args );
