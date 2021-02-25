@@ -1,4 +1,4 @@
-(function (wp) {
+/*(function (wp) {
     wp.hooks.addFilter(
         'blocks.registerBlockType',
         'purpleId/idAttribute',
@@ -15,6 +15,6 @@
             return settings;
         }
     );
-})(window.wp);
+})(window.wp);*/
 
 
