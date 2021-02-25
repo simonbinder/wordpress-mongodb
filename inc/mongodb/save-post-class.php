@@ -292,7 +292,7 @@ if ( ! class_exists( 'Save_Post' ) ) {
 							'post_parent'             => $post->post_parent,
 							'post_excerpt'            => $post->post_excerpt,
 							'comment_status'          => $post->comment_status,
-							'thumbnail'               => get_the_post_thumbnail_url( $post_id ),
+							'post_image_url'          => get_the_post_thumbnail_url( $post_id ),
 							'permalink'               => get_permalink( $post_id ),
 							'post_name'               => $post->post_name,
 							'post_modified'           => $post->post_modified,
@@ -318,6 +318,7 @@ if ( ! class_exists( 'Save_Post' ) ) {
 							'source_href'             => $current_blog_details->siteurl,
 							'uagb_featured_image_src' => $featured_images,
 							'post_content_html'       => $post_content_html,
+							'post_published'          => get_the_date( 'Y-m-d h:m:s', $post ),
 						),
 					),
 					array( 'upsert' => true )
