@@ -69,7 +69,7 @@ if ( ! class_exists( 'Save_Post' ) ) {
 
 		public function add_purple_id( $data, $postarr ) {
 			$post   = get_post( $postarr['ID'] );
-			$is_rss = $post->post_type == 'rss_feed';
+			$is_rss = $post->post_type == 'rss_feed' || $data['post_type'] == 'rss_feed';
 			if ( ! $is_rss ) {
 				$blocks          = parse_blocks( stripslashes( $postarr['post_content'] ) );
 				$blocks_filtered = array_filter( $blocks, array( $this, 'filter_blocks' ) );
@@ -86,11 +86,12 @@ if ( ! class_exists( 'Save_Post' ) ) {
 		public function update_all_posts() {
 			$args      = array(
 				'numberposts' => -1,
+				'post_status' => 'any',
+				'post_type'   => get_post_types( '', 'names' ),
 			);
 			$all_posts = get_posts( $args );
 			foreach ( $all_posts as $single_post ) {
-				$single_post->post_title = $single_post->post_title . '';
-				wp_update_post( $single_post );
+				$this->save_in_db( $single_post->ID, $single_post, null );
 			}
 		}
 
@@ -347,9 +348,9 @@ if ( ! class_exists( 'Save_Post' ) ) {
 			if ( $zip->open( $path ) === true ) {
 				$zip->extractTo( $zip_file_path );
 				$zip->close();
-				$files = glob( $zip_file_path . "/content/*.html" );
+				$files = glob( $zip_file_path . '/content/*.html' );
 				$file  = basename( $files[0] );
-				return get_site_url() .'/wp-content/uploads/temp/'. General_Utilities::sprylab_purple_prefix_user() . '/' . get_the_ID()  . '/content/' . $file;
+				return get_site_url() . '/wp-content/uploads/temp/' . General_Utilities::sprylab_purple_prefix_user() . '/' . get_the_ID() . '/content/' . $file;
 			} else {
 				return '';
 			}
