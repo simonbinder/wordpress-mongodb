@@ -64,7 +64,7 @@ if ( ! class_exists( 'Save_Post' ) ) {
 			add_action( 'save_post', array( $this, 'save_in_db' ), 10, 3 );
 			add_action( 'delete_post', array( $this, 'delete_from_db' ) );
 			/*          add_action( 'wp_loaded',  array( $this,'update_all_posts') );*/
-		/*	add_filter( 'wp_insert_post_data', array( $this, 'add_purple_id' ), 99, 2 );*/
+			add_filter( 'wp_insert_post_data', array( $this, 'add_purple_id' ), 99, 2 );
 		}
 
 		public function add_purple_id( $data, $postarr ) {
@@ -109,7 +109,7 @@ if ( ! class_exists( 'Save_Post' ) ) {
 		}
 
 		public function save_in_db( $post_id, \WP_Post $post, $update ) {
-			$is_rss = $post->post_type === 'rss_feed';
+			$is_rss = $post->post_type == 'rss_feed';
 			if ( ! $is_rss ) {
 				$mongo_posts = null;
 				if ( $post->post_type === 'revision' ) {
@@ -136,9 +136,9 @@ if ( ! class_exists( 'Save_Post' ) ) {
 				);
 				$blocks          = parse_blocks( $post->post_content );
 				$blocks_filtered = array_filter( $blocks, array( $this, 'filter_blocks' ) );
-				/*foreach ( $blocks_filtered as $key => $block ) {
+				foreach ( $blocks_filtered as $key => $block ) {
 					$blocks_filtered = $this->add_content_attr( $block['innerHTML'], $blocks_filtered, $key );
-				}*/
+				}
 
 				$issues = get_post_meta( $post_id, self::PURPLE_IN_ISSUES, true ) ?: array();
 				$issues = array_map(
