@@ -4,7 +4,7 @@
 Plugin Name: Purple DS HUB - NoSQL
 Plugin URI:  https://sprylab.com
 Description: NoSQL sync plugin for Purple DS HUB.
-Version:     0.0.1
+Version:     0.9
 Author:      sprylab technologies
 Author URI:  https://sprylab.com
 License:     GPL V3.
@@ -15,6 +15,7 @@ Domain Path: /languages
 
 // exit.
 defined( 'ABSPATH' ) || exit;
+
 
 require_once __DIR__ . '/vendor/autoload.php';
 require_once __DIR__ . '/inc/autoloader-class.php';
@@ -29,9 +30,10 @@ function debug( $var ) {
 	error_log( print_r( $var, true ) );
 }
 
-$save_post = new \NoSQL\Inc\Mongodb\Save_Post();
-$save_post->init_hooks();
+$init_connection = new \NoSQL\Inc\Mongodb\Init_Connection();
+
 /*
+ * Comment out to activate GraphQL Endpoint as a plugin.
 $graphql = new \NoSQL\Inc\Server\Graphql_Init();*/
 
 wp_enqueue_script(
