@@ -2,6 +2,7 @@
 
 namespace NoSQL\Inc\Mongodb;
 
+use MongoDB\Database;
 use PurpleDsHub\Inc\Interfaces\Hooks_Interface;
 use \PurpleDsHub\Inc\Utilities\Torque_Urls;
 use const PurpleDsHub\Inc\Api\PURPLE_IN_ISSUES;
@@ -15,15 +16,23 @@ if ( ! class_exists( 'Update_Comments' ) ) {
 		const HANDLE = 'update-comments';
 
 		/**
+		 * Connection to db.
+		 *
+		 * @var Database $connection Connection to db.
 		 */
 		private $connection;
 
+		/**
+		 * Update_Comments constructor.
+		 *
+		 * @param Database $connection connection do db.
+		 */
 		public function __construct( $connection ) {
 			$this->connection = $connection;
 		}
 
 		/**
-		 * @return mixed|void
+		 * Initialize all hooks.
 		 */
 		public function init_hooks() {
 			add_action( 'deleted_comment', array( $this, 'delete_comment_from_db' ) );
@@ -32,6 +41,11 @@ if ( ! class_exists( 'Update_Comments' ) ) {
 			add_action( 'edit_comment', array( $this, 'update_comment' ) );
 		}
 
+		/**
+		 * Update modified comment in db.
+		 *
+		 * @param int $comment_id id of current comment.
+		 */
 		public function update_comment( $comment_id ) {
 			$comments_connection = $this->connection->selectCollection( 'comments' );
 			$comment             = get_comment( $comment_id );
@@ -55,6 +69,11 @@ if ( ! class_exists( 'Update_Comments' ) ) {
 			$post_connection->updateOne( array( 'postId' => intval( get_current_blog_id() . '_' . $comment->comment_post_ID ) ), $update );
 		}
 
+		/**
+		 * Delete comment from db.
+		 *
+		 * @param int $comment_id current comment id.
+		 */
 		public function delete_comment_from_db( $comment_id ) {
 			$comments_connection = $this->connection->selectCollection( 'comments' );
 			$comments_connection->deleteOne(

@@ -2,6 +2,7 @@
 
 namespace NoSQL\Inc\Mongodb;
 
+use MongoDB\Database;
 use PurpleDsHub\Inc\Interfaces\Hooks_Interface;
 use \PurpleDsHub\Inc\Utilities\Torque_Urls;
 use const PurpleDsHub\Inc\Api\PURPLE_IN_ISSUES;
@@ -15,20 +16,33 @@ if ( ! class_exists( 'Update_User' ) ) {
 		const HANDLE = 'update-user';
 
 		/**
+		 * Connection to db.
+		 *
+		 * @var Database $connection Connection to db.
 		 */
 		private $connection;
 
-		public function __construct($connection) {
+		/**
+		 * Update_User constructor.
+		 *
+		 * @param Database $connection connection do db.
+		 */
+		public function __construct( $connection ) {
 			$this->connection = $connection;
 		}
 
 		/**
-		 * @return mixed|void
+		 * Initialize all hooks.
 		 */
 		public function init_hooks() {
 			add_action( 'profile_update', array( $this, 'update_user' ) );
 		}
 
+		/**
+		 * Update user in db.
+		 *
+		 * @param int $user_id current user id.
+		 */
 		public function update_user( $user_id ) {
 			$user_connection = $this->connection->selectCollection( 'users_' . get_current_blog_id() );
 			$user            = get_user_by( 'id', $user_id );
