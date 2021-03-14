@@ -31,7 +31,7 @@ if ( ! class_exists( 'Graphql_Init' ) ) {
 
 				// select a database
 				$this->db         = $m->selectDatabase( 'wp' );
-				$this->connection = $this->db->selectCollection( 'posts_1' );
+				$this->connection = $this->db->selectCollection( 'posts' );
 
 				add_action( 'rest_api_init', array( $this, 'register_endpoint' ) );
 		}
@@ -64,7 +64,7 @@ if ( ! class_exists( 'Graphql_Init' ) ) {
 					array(
 						'name'   => 'custom_field',
 						'fields' => array(
-							'field'   => Type::string(),
+							'field' => Type::string(),
 							'value' => Type::string(),
 						),
 					)

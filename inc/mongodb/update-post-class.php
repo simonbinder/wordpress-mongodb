@@ -2,71 +2,58 @@
 
 namespace NoSQL\Inc\Mongodb;
 
+use MongoDB\Database;
 use PurpleDsHub\Inc\Interfaces\Hooks_Interface;
 use PurpleDsHub\Inc\Utilities\General_Utilities;
 use \PurpleDsHub\Inc\Utilities\Torque_Urls;
 
-if ( ! class_exists( 'Save_Post' ) ) {
-	class Save_Post {
+if ( ! class_exists( 'Update_Post' ) ) {
+	class Update_Post {
 
 		/**
 		 * Component's handle.
 		 */
-		const HANDLE = 'save-post';
+		const HANDLE = 'update-post';
 
 		const PURPLE_IN_ISSUES = 'purple_in_issues';
 
 		/**
+		 * Conection to db.
+		 *
+		 * @var Database $connection connection to database.
 		 */
 		private $connection;
 
-		public function __construct() {
-			if ( is_null( $this->connection ) ) {
-				$SSL_DIR  = '/etc/ssl/certs';
-				$SSL_FILE = 'rds-combined-ca-bundle.pem';
-
-				// connect to mongodb.
-				$m = new \MongoDB\Client(
-					DOCUMENTDB_URL,
-					DOCUMENTDB_USERNAME ? array(
-						'username'  => rawurlencode( DOCUMENTDB_USERNAME ),
-						'password'  => rawurlencode( DOCUMENTDB_PASSWORD ),
-						'ssl'       => true,
-						'tlsCAFile' => $SSL_DIR . '/' . $SSL_FILE,
-					) : array()
-				);
-
-				// select database by blog id.
-				$db               = $m->selectDatabase( 'wp_' . DOCUMENTDB_STAGE );
-				$this->connection = $db;
-
-				$update_comments = new Update_Comments( $this->connection );
-				$update_comments->init_hooks();
-
-				$update_categories = new Update_Taxonomies( $this->connection );
-				$update_categories->init_hooks();
-
-				$update_user = new Update_User( $this->connection );
-				$update_user->init_hooks();
-
-				$update_menu = new Update_Menu( $this->connection );
-				$update_menu->init_hooks();
-
-				$update_acf = new Update_Acf( $this->connection );
-				$update_acf->init_hooks();
-			}
+		/**
+		 * Update_Post constructor.
+		 *
+		 * @param Database $connection conection to database.
+		 */
+		public function __construct( $connection ) {
+			$this->connection = $connection;
 		}
 
 		/**
+		 * Initialize all hooks.
+		 *
 		 * @return mixed|void
 		 */
 		public function init_hooks() {
 			add_action( 'save_post', array( $this, 'save_in_db' ), 10, 3 );
 			add_action( 'delete_post', array( $this, 'delete_from_db' ) );
-			/*          add_action( 'wp_loaded',  array( $this,'update_all_posts') );*/
 			add_filter( 'wp_insert_post_data', array( $this, 'add_purple_id' ), 99, 2 );
+
+			// Use this hook to save all posts in the db.
+			/*          add_action( 'wp_loaded',  array( $this,'save_all_posts') );*/
 		}
 
+		/**
+		 * This method adds a unique ID to all blocks except for the post type rss_feed.
+		 *
+		 * @param array $data array of slashed, sanitized, and processed post data.
+		 * @param array $postarr array array of sanitized (and slashed) but otherwise unmodified post data.
+		 * @return mixed
+		 */
 		public function add_purple_id( $data, $postarr ) {
 			$post   = get_post( $postarr['ID'] );
 			$is_rss = $post->post_type == 'rss_feed' || $data['post_type'] == 'rss_feed';
@@ -83,7 +70,10 @@ if ( ! class_exists( 'Save_Post' ) ) {
 			return $data;
 		}
 
-		public function update_all_posts() {
+		/**
+		 * Update all posts in the db.
+		 */
+		public function save_all_posts() {
 			$args      = array(
 				'numberposts' => -1,
 				'post_status' => 'any',
@@ -95,6 +85,11 @@ if ( ! class_exists( 'Save_Post' ) ) {
 			}
 		}
 
+		/**
+		 * Delete post from db.
+		 *
+		 * @param int $postid id of the post that gets deleted.
+		 */
 		public function delete_from_db( int $postid ) {
 			$mongo_posts = $this->connection->selectCollection( 'posts' );
 			$mongo_posts->deleteOne(
@@ -105,11 +100,24 @@ if ( ! class_exists( 'Save_Post' ) ) {
 			);
 		}
 
-		private function filter_blocks( $var ) {
-			return $var['blockName'] !== null;
+		/**
+		 * Filter blocks that are empty.
+		 *
+		 * @param array $block block that gets filtered.
+		 * @return bool
+		 */
+		private function filter_blocks( $block ) {
+			return $block['blockName'] !== null;
 		}
 
-		public function save_in_db( $post_id, \WP_Post $post, $update ) {
+		/**
+		 * Save post in db.
+		 *
+		 * @param int      $post_id Post ID.
+		 * @param \WP_Post $post Post object.
+		 * @param bool     $update Whether this is an existing post being updated.
+		 */
+		public function save_in_db( int $post_id, \WP_Post $post, bool $update ) {
 			$is_rss = $post->post_type == 'rss_feed';
 			if ( ! $is_rss ) {
 				$mongo_posts = null;
@@ -128,13 +136,7 @@ if ( ! class_exists( 'Save_Post' ) ) {
 				$mongo_posts->createIndex( array( 'post_id' => 1 ) );
 				$mongo_posts->createIndex( array( 'post_content.blockName' => 1 ) );
 
-				$post_categories = wp_get_post_categories( $post_id );
-				$post_categories = array_map(
-					function( $val ) {
-						return get_current_blog_id() . '_' . $val;
-					},
-					$post_categories
-				);
+				$post_categories = $this->retrieve_categories( $post_id );
 				$blocks          = parse_blocks( $post->post_content );
 				$blocks_filtered = array_filter( $blocks, array( $this, 'filter_blocks' ) );
 				foreach ( $blocks_filtered as $key => $block ) {
@@ -144,35 +146,10 @@ if ( ! class_exists( 'Save_Post' ) ) {
 				$issues = get_post_meta( $post_id, self::PURPLE_IN_ISSUES, true ) ?: array();
 				$issues = array_map(
 					function ( $issue_id ) {
-						$post = get_post( $issue_id );
-						return $post;
+						return get_post( $issue_id );
 					},
 					$issues
 				);
-
-				$advanced_custom_fields = array();
-				if (
-				in_array(
-					'advanced-custom-fields/acf.php',
-					apply_filters( 'active_plugins', get_option( 'active_plugins' ) ),
-					true
-				) ||
-				in_array(
-					'advanced-custom-fields-pro/acf.php',
-					apply_filters( 'active_plugins', get_option( 'active_plugins' ) ),
-					true
-				)
-				) {
-					foreach ( get_field_objects( $post_id ) as $field_object ) {
-						array_push(
-							$advanced_custom_fields,
-							array(
-								'fieldId' => get_current_blog_id() . '_' . $field_object['ID'],
-								'value'   => $field_object['value'],
-							)
-						);
-					}
-				}
 
 				$comments     = get_comments(
 					array(
@@ -187,88 +164,21 @@ if ( ! class_exists( 'Save_Post' ) ) {
 					$comments_ids
 				);
 
-				$articles = get_post_meta( $post_id, 'purple_issue_articles', true );
-				$articles = array_map(
-					function ( $article_id ) {
-						$post                      = get_post( $article_id );
-						$post->{'permalink'}       = get_permalink( $article_id );
-						$post->{'author_name'}     = get_the_author_meta( 'display_name', $post->post_author );
-						$post->{'article_options'} = get_post_meta( $article_id, 'purple_content_options', true );
+				$advanced_custom_fields = $this->retrieve_acf_fields( $post_id );
+				$articles               = $this->retrieve_articles( $post_id );
+				$post_content_html      = $this->retrieve_post_content_html( $post_id, $post );
+				$custom_fields          = $this->retrieve_custom_fields( $post_id );
+				$author_id              = get_post_field( 'post_author', $post_id );
+				$term_ids               = $this->retrieve_term_ids( $post );
 
-						return $post;
-					},
-					$articles
-				);
-
-				$post_content_html = '';
-				if ( get_post_meta( $post_id, 'sprylab_purple_post_app_package' ) ) {
-					$path = $this->get_app_package_path( $post_id );
-					$d    = new \DOMDocument();
-					$mock = new \DOMDocument();
-					$d->loadHTML( file_get_contents( $path ) );
-					$body = $d->getElementsByTagName( 'body' )->item( 0 );
-					foreach ( $body->childNodes as $child ) {
-						if ( $child->tagName !== 'script' ) {
-							$mock->appendChild( $mock->importNode( $child, true ) );
-						}
-					}
-
-					$post_content_html = $mock->saveHTML();
-				} else {
-					$post_content_html = apply_filters( 'the_content', $post->post_content );
-				}
-
-				$custom_fields = array();
-				$post_meta     = get_post_meta( $post_id, '', true );
-				foreach ( $post_meta as $meta_key => $meta_value ) {
-					if ( self::starts_with( $meta_key, 'purple_custom_meta_' ) ) {
-						$stripped_key = str_replace( 'purple_custom_meta_', '', $meta_key );
-						array_push(
-							$custom_fields,
-							array(
-								'field' => $stripped_key,
-								'value' => $meta_value[0],
-							)
-						);
-					}
-				}
-				$author_id = get_post_field( 'post_author', $post_id );
-				$term_list = wp_get_post_terms( $post->ID, 'post_tag', array( 'fields' => 'all' ) );
-				$term_ids  = array();
-				foreach ( $term_list as $term ) {
-					array_push(
-						$term_ids,
-						get_current_blog_id() . '_' . $term->term_id
-					);
-				}
-
-				$taxonomies = get_object_taxonomies( $post );
-				$post_terms = array();
-				foreach ( $taxonomies as $taxonomy ) {
-					$terms = get_the_terms( $post, $taxonomy );
-					foreach ( $terms as $term ) {
-						array_push( $post_terms, $term );
-					}
-				}
-				$post_terms_filtered = array_filter(
-					$post_terms,
-					function ( $var ) {
-						return ( $var->taxonomy !== 'author' && $var->taxonomy !== 'post_tag' && $var->taxonomy !== 'category' );
-					}
-				);
+				$post_terms_filtered = $this->filter_post_terms( $post );
+				$taxonomies          = $this->retrieve_taxonomies( $post_terms_filtered );
 
 				$purple_issue_articles = array_map(
 					function ( $article_id ) {
 						return get_current_blog_id() . '_' . $article_id;
 					},
 					array_column( $articles, 'ID' )
-				);
-
-				$taxonomies = array_map(
-					function ( $term_id ) {
-						return get_current_blog_id() . '_' . $term_id;
-					},
-					array_column( $post_terms_filtered, 'term_id' )
 				);
 
 				$post_array                   = (array) $post;
@@ -330,7 +240,13 @@ if ( ! class_exists( 'Save_Post' ) ) {
 			}
 		}
 
-		private function get_app_package_path( $post_id ) {
+		/**
+		 * Retrieve path to app package.
+		 *
+		 * @param int $post_id Post ID.
+		 * @return string
+		 */
+		private function get_app_package_path( int $post_id ) {
 			global $blog_id;
 			$path = '';
 
@@ -356,6 +272,11 @@ if ( ! class_exists( 'Save_Post' ) ) {
 			}
 		}
 
+		/**
+		 * Generate unique ID.
+		 *
+		 * @return string
+		 */
 		private function guidv4() {
 			if ( function_exists( 'com_create_guid' ) === true ) {
 				return trim( com_create_guid(), '{}' );
@@ -368,9 +289,11 @@ if ( ! class_exists( 'Save_Post' ) ) {
 		}
 
 		/**
-		 * @param $inner_html
-		 * @param array      $blocks_filtered
-		 * @param $key
+		 * Add purpleID and content attribute to blocks
+		 *
+		 * @param string $inner_html HTML of WP Block.
+		 * @param array  $blocks_filtered blocks of the post.
+		 * @param int    $key current block index.
 		 * @return array
 		 */
 		private function add_content_attr( $inner_html, array $blocks_filtered, $key, $update_id = false ): array {
@@ -388,11 +311,11 @@ if ( ! class_exists( 'Save_Post' ) ) {
 			return $blocks_filtered;
 		}
 
-		public static function starts_with( $haystack, $needle ) {
-			// search backwards starting from haystack length characters from the end.
-			return '' === $needle || strrpos( $haystack, $needle, -strlen( $haystack ) ) !== false;
-		}
-
+		/**
+		 * Update all taxonomies related to the post.
+		 *
+		 * @param \WP_Post $post current post.
+		 */
 		private function update_taxonomies( $post ) {
 			$taxonomies          = get_object_taxonomies( $post );
 			$taxonomy_connection = $this->connection->selectCollection( 'taxonomies' );
@@ -416,7 +339,9 @@ if ( ! class_exists( 'Save_Post' ) ) {
 		}
 
 		/**
-		 * @param $comments
+		 * Update all comments related to the post.
+		 *
+		 * @param array $comments all comments belonging to the post.
 		 */
 		private function update_comments( $comments ) {
 			$comments_connection = $this->connection->selectCollection( 'comments' );
@@ -439,11 +364,14 @@ if ( ! class_exists( 'Save_Post' ) ) {
 			}
 		}
 
+		/**
+		 * Update all users related to the post.
+		 */
 		private function update_users() {
 			$users_connection = $this->connection->selectCollection( 'users' );
 			$users            = get_users();
 			foreach ( $users as $user ) {
-				$insert_result = $users_connection->updateOne(
+				$users_connection->updateOne(
 					array(
 						'source_user_id' => get_current_blog_id() . '_' . $user->ID,
 					),
@@ -463,6 +391,176 @@ if ( ! class_exists( 'Save_Post' ) ) {
 					array( 'upsert' => true )
 				);
 			}
+		}
+
+		/**
+		 * Retrieve all categories belonging to the post.
+		 *
+		 * @param int $post_id current post id.
+		 */
+		private function retrieve_categories( int $post_id ) {
+			$post_categories = wp_get_post_categories( $post_id );
+			return array_map(
+				function ( $val ) {
+					return get_current_blog_id() . '_' . $val;
+				},
+				$post_categories
+			);
+		}
+
+		/**
+		 * Retrieve all acf fields belonging to the post.
+		 *
+		 * @param int $post_id current post id.
+		 */
+		private function retrieve_acf_fields( int $post_id ) {
+			$advanced_custom_fields = array();
+			if (
+				in_array(
+					'advanced-custom-fields/acf.php',
+					apply_filters( 'active_plugins', get_option( 'active_plugins' ) ),
+					true
+				) ||
+				in_array(
+					'advanced-custom-fields-pro/acf.php',
+					apply_filters( 'active_plugins', get_option( 'active_plugins' ) ),
+					true
+				)
+			) {
+				foreach ( get_field_objects( $post_id ) as $field_object ) {
+					array_push(
+						$advanced_custom_fields,
+						array(
+							'fieldId' => get_current_blog_id() . '_' . $field_object['ID'],
+							'value'   => $field_object['value'],
+						)
+					);
+				}
+			}
+			return $advanced_custom_fields;
+		}
+
+		/**
+		 * Get all articles belonging to the issue.
+		 *
+		 * @param int $post_id current post id.
+		 */
+		private function retrieve_articles( int $post_id ) {
+			$articles = get_post_meta( $post_id, 'purple_issue_articles', true );
+			return array_map(
+				function ( $article_id ) {
+					$post                      = get_post( $article_id );
+					$post->{'permalink'}       = get_permalink( $article_id );
+					$post->{'author_name'}     = get_the_author_meta( 'display_name', $post->post_author );
+					$post->{'article_options'} = get_post_meta( $article_id, 'purple_content_options', true );
+
+					return $post;
+				},
+				$articles
+			);
+		}
+
+		/**
+		 * Read post content from html file and generate html string from it.
+		 *
+		 * @param int      $post_id current post id.
+		 * @param \WP_Post $post current post.
+		 */
+		private function retrieve_post_content_html( int $post_id, \WP_Post $post ) {
+			$post_content_html = '';
+			if ( get_post_meta( $post_id, 'sprylab_purple_post_app_package' ) ) {
+				$path = $this->get_app_package_path( $post_id );
+				$d    = new \DOMDocument();
+				$mock = new \DOMDocument();
+				$d->loadHTML( file_get_contents( $path ) );
+				$body = $d->getElementsByTagName( 'body' )->item( 0 );
+				foreach ( $body->childNodes as $child ) {
+					if ( $child->tagName !== 'script' ) {
+						$mock->appendChild( $mock->importNode( $child, true ) );
+					}
+				}
+
+				$post_content_html = $mock->saveHTML();
+			} else {
+				$post_content_html = apply_filters( 'the_content', $post->post_content );
+			}
+			return $post_content_html;
+		}
+
+		/**
+		 * Get all custom fields related to current post
+		 *
+		 * @param int $post_id current post id.
+		 */
+		private function retrieve_custom_fields( int $post_id ) {
+			$custom_fields = array();
+			$post_meta     = get_post_meta( $post_id, '', true );
+			foreach ( $post_meta as $meta_key => $meta_value ) {
+				if ( Torque_Urls::starts_with( $meta_key, 'purple_custom_meta_' ) ) {
+					$stripped_key = str_replace( 'purple_custom_meta_', '', $meta_key );
+					array_push(
+						$custom_fields,
+						array(
+							'field' => $stripped_key,
+							'value' => $meta_value[0],
+						)
+					);
+				}
+			}
+			return $custom_fields;
+		}
+
+		/**
+		 * Filter post terms for the ones not defined in other fields.
+		 *
+		 * @param \WP_Post $post current post.
+		 */
+		private function filter_post_terms( \WP_Post $post ) {
+			$taxonomies = get_object_taxonomies( $post );
+			$post_terms = array();
+			foreach ( $taxonomies as $taxonomy ) {
+				$terms = get_the_terms( $post, $taxonomy );
+				foreach ( $terms as $term ) {
+					array_push( $post_terms, $term );
+				}
+			}
+			return array_filter(
+				$post_terms,
+				function ( $var ) {
+					return ( $var->taxonomy !== 'author' && $var->taxonomy !== 'post_tag' && $var->taxonomy !== 'category' );
+				}
+			);
+		}
+
+		/**
+		 * Get all taxonomies related to the post.
+		 *
+		 * @param array $post_terms_filtered filtered post terms.
+		 */
+		private function retrieve_taxonomies( array $post_terms_filtered ) {
+			return array_map(
+				function ( $term_id ) {
+					return get_current_blog_id() . '_' . $term_id;
+				},
+				array_column( $post_terms_filtered, 'term_id' )
+			);
+		}
+
+		/**
+		 * Get all term ids.
+		 *
+		 * @param \WP_Post $post current post.
+		 */
+		private function retrieve_term_ids( \WP_Post $post ) {
+			$term_ids  = array();
+			$term_list = wp_get_post_terms( $post->ID, 'post_tag', array( 'fields' => 'all' ) );
+			foreach ( $term_list as $term ) {
+				array_push(
+					$term_ids,
+					get_current_blog_id() . '_' . $term->term_id
+				);
+			}
+			return $term_ids;
 		}
 	}
 }
