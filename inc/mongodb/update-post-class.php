@@ -181,9 +181,13 @@ if ( ! class_exists( 'Update_Post' ) ) {
 					array_column( $articles, 'ID' )
 				);
 
+				$target            = get_post_meta( $post_id, 'purple_linked_issue', true );
+				$linked_issue      = get_post_meta( $issues[0]->ID, 'purple_linked_issue', true );
+				$upload_properties = get_post_meta( $post_id, 'purple_upload_properties', true );
+				debug( get_the_post_thumbnail_url($post_id) );
+
 				$post_array                   = (array) $post;
 				$post_array['featured_media'] = get_post_thumbnail_id( $post );
-				$featured_images              = uagb_blocks_get_image_src( $post_array, 'uagb_featured_image_src', null );
 				$current_blog_details         = get_blog_details( array( 'blog_id' => get_current_blog_id() ) );
 
 				$mongo_posts->updateOne(
@@ -213,7 +217,14 @@ if ( ! class_exists( 'Update_Post' ) ) {
 							'post_excerpt'            => $post->post_excerpt,
 							'comment_count'           => $post->comment_count,
 							'comments'                => array_map( 'intval', $comments_ids ),
-							'purple_issue'            => $issues[0]->ID ? get_current_blog_id() . '_' . $issues[0]->ID : null,
+							'purple_issue_id'         => $issues[0]->ID ? get_current_blog_id() . '_' . $issues[0]->ID : null,
+							'purple_manager_issue_id' => $linked_issue['issue']['id'],
+							'target'                  => array(
+								'app_id'         => $target['app']['id'],
+								'publication_id' => $target['publication']['id'],
+								'issue_id'       => $target['issue']['id'],
+							),
+							'purple_issue_title'      => $issues[0]->post_title,
 							'purple_issue_articles'   => $purple_issue_articles,
 							'ping_status'             => $post->ping_status,
 							'post_password'           => $post->post_password,
@@ -227,9 +238,10 @@ if ( ! class_exists( 'Update_Post' ) ) {
 							'source_id'               => get_current_blog_id(),
 							'source_title'            => $current_blog_details->blogname,
 							'source_href'             => $current_blog_details->siteurl,
-							'uagb_featured_image_src' => $featured_images,
+							'featured_image'           => get_the_post_thumbnail_url( $post_id ),
 							'post_content_html'       => $post_content_html,
 							'post_published'          => get_the_date( 'Y-m-d h:m:s', $post ),
+							'access_level'            => $upload_properties['accessLevel'],
 						),
 					),
 					array( 'upsert' => true )
@@ -495,6 +507,7 @@ if ( ! class_exists( 'Update_Post' ) ) {
 		private function retrieve_custom_fields( int $post_id ) {
 			$custom_fields = array();
 			$post_meta     = get_post_meta( $post_id, '', true );
+
 			foreach ( $post_meta as $meta_key => $meta_value ) {
 				if ( Torque_Urls::starts_with( $meta_key, 'purple_custom_meta_' ) ) {
 					$stripped_key = str_replace( 'purple_custom_meta_', '', $meta_key );
