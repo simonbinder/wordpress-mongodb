@@ -91,9 +91,21 @@ if ( ! class_exists( 'Update_Post' ) ) {
 		 * @param int $postid id of the post that gets deleted.
 		 */
 		public function delete_from_db( int $postid ) {
+			$post        = get_post( $postid );
 			$mongo_posts = $this->connection->selectCollection( 'posts' );
 			$mongo_posts->deleteOne(
 				array( 'source_post_id' => get_current_blog_id() . '_' . $postid )
+			);
+			$result = $mongo_posts->updateOne(
+				array( 'source_post_id' => get_current_blog_id() . '_' . $postid ),
+				array(
+					'$set' => array(
+						'source_post_id' => get_current_blog_id() . '_' . $postid,
+						'deleted'        => true,
+						'post_modified'  => $post->post_modified,
+					),
+				),
+				array( 'upsert' => true )
 			);
 			$mongo_posts->deleteMany(
 				array( 'post_parent' => get_current_blog_id() . '_' . $postid )
@@ -184,7 +196,6 @@ if ( ! class_exists( 'Update_Post' ) ) {
 				$target            = get_post_meta( $post_id, 'purple_linked_issue', true );
 				$linked_issue      = get_post_meta( $issues[0]->ID, 'purple_linked_issue', true );
 				$upload_properties = get_post_meta( $post_id, 'purple_upload_properties', true );
-				debug( get_the_post_thumbnail_url($post_id) );
 
 				$post_array                   = (array) $post;
 				$post_array['featured_media'] = get_post_thumbnail_id( $post );
@@ -238,7 +249,7 @@ if ( ! class_exists( 'Update_Post' ) ) {
 							'source_id'               => get_current_blog_id(),
 							'source_title'            => $current_blog_details->blogname,
 							'source_href'             => $current_blog_details->siteurl,
-							'featured_image'           => get_the_post_thumbnail_url( $post_id ),
+							'featured_image'          => get_the_post_thumbnail_url( $post_id ),
 							'post_content_html'       => $post_content_html,
 							'post_published'          => get_the_date( 'Y-m-d h:m:s', $post ),
 							'access_level'            => $upload_properties['accessLevel'],
