@@ -35,7 +35,8 @@ if ( ! class_exists( 'Init_Connection' ) ) {
 				);
 
 				// select database by blog id.
-				$db               = $m->selectDatabase( 'wp_' . DOCUMENTDB_STAGE );
+				$db_name          = get_option( Nosql_Settings::PURPLE_NOSQL_DATABASE_NAME );
+				$db               = $m->selectDatabase( 'wp_' . $db_name );
 				$this->connection = $db;
 
 				$update_post = new Update_Post( $this->connection );

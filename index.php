@@ -32,6 +32,10 @@ function debug( $var ) {
 
 $init_connection = new \NoSQL\Inc\Mongodb\Init_Connection();
 
+$settings = new \NoSQL\Inc\Mongodb\Nosql_Settings();
+$settings->init_hooks();
+
+
 /*
  * Comment out to activate GraphQL Endpoint as a plugin.
 $graphql = new \NoSQL\Inc\Server\Graphql_Init();*/

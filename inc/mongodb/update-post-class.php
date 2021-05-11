@@ -24,6 +24,7 @@ if ( ! class_exists( 'Update_Post' ) ) {
 		 */
 		private $connection;
 
+		public $rest_service;
 		/**
 		 * Update_Post constructor.
 		 *
@@ -110,6 +111,8 @@ if ( ! class_exists( 'Update_Post' ) ) {
 			$mongo_posts->deleteMany(
 				array( 'post_parent' => get_current_blog_id() . '_' . $postid )
 			);
+
+			$this->notify_acm();
 		}
 
 		/**
@@ -260,6 +263,39 @@ if ( ! class_exists( 'Update_Post' ) ) {
 				$this->update_comments( $comments );
 				$this->update_users();
 				$this->update_taxonomies( $post );
+				$this->notify_acm();
+			}
+		}
+
+		private function notify_acm() {
+			$last_notified_date = get_option( 'sprylab_purple_nosql_last_notified' );
+			if ( abs( time() - $last_notified_date ) > 60 ) {
+				$url      = get_option( Nosql_Settings::PURPLE_NOSQL_ACM_URL );
+				$api_key  = get_option( Nosql_Settings::PURPLE_NOSQL_ACM_API_KEY );
+				$data     = array(
+					'username'  => get_option( Nosql_Settings::PURPLE_NOSQL_ACM_USERNAME ),
+					'from_date' => date( 'Y/m/d, H:m:s', $last_notified_date ),
+					'to_date'   => date( 'Y/m/d, H:m:s', time() ),
+				);
+				debug($data);
+				$response = wp_remote_post(
+					$url . '/core/index/articles',
+					array(
+						'method'      => 'POST',
+						'timeout'     => 45,
+						'redirection' => 5,
+						'httpversion' => '1.0',
+						'blocking'    => true,
+						'headers'     => array(
+							'X-API-Key'    => $api_key,
+							'Content-Type' => 'application/json; charset=utf-8',
+						),
+						'body'        => json_encode( $data ),
+						'cookies'     => array(),
+					)
+				);
+				debug( $response );
+				update_option( 'sprylab_purple_nosql_last_notified', time() );
 			}
 		}
 
