@@ -274,11 +274,10 @@ if ( ! class_exists( 'Update_Post' ) ) {
 				$api_key  = get_option( Nosql_Settings::PURPLE_NOSQL_ACM_API_KEY );
 				$data     = array(
 					'username'  => get_option( Nosql_Settings::PURPLE_NOSQL_ACM_USERNAME ),
-					'from_date' => date( 'Y/m/d, H:m:s', $last_notified_date ),
-					'to_date'   => date( 'Y/m/d, H:m:s', time() ),
+					'from_date' => date( 'Y/m/d, H:i:s', $last_notified_date ),
+					'to_date'   => date( 'Y/m/d, H:i:s' ),
 				);
-				debug($data);
-				$response = wp_remote_post(
+				wp_remote_post(
 					$url . '/core/index/articles',
 					array(
 						'method'      => 'POST',
@@ -290,11 +289,10 @@ if ( ! class_exists( 'Update_Post' ) ) {
 							'X-API-Key'    => $api_key,
 							'Content-Type' => 'application/json; charset=utf-8',
 						),
-						'body'        => json_encode( $data ),
+						'body'        => wp_json_encode( $data ),
 						'cookies'     => array(),
 					)
 				);
-				debug( $response );
 				update_option( 'sprylab_purple_nosql_last_notified', time() );
 			}
 		}
