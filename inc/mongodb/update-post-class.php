@@ -273,9 +273,9 @@ if ( ! class_exists( 'Update_Post' ) ) {
 				$url      = get_option( Nosql_Settings::PURPLE_NOSQL_ACM_URL );
 				$api_key  = get_option( Nosql_Settings::PURPLE_NOSQL_ACM_API_KEY );
 				$data     = array(
-					'username'  => get_option( Nosql_Settings::PURPLE_NOSQL_ACM_USERNAME ),
-					'from_date' => date( 'Y/m/d, H:i:s', $last_notified_date ),
-					'to_date'   => date( 'Y/m/d, H:i:s' ),
+					'username'  => get_option( Nosql_Settings::PURPLE_NOSQL_ACM_USERNAME )
+				/*	'from_date' => date( 'Y/m/d, H:i:s', $last_notified_date ),
+					'to_date'   => date( 'Y/m/d, H:i:s' ),*/
 				);
 				wp_remote_post(
 					$url . '/core/index/articles',
