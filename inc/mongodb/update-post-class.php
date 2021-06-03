@@ -44,8 +44,12 @@ if ( ! class_exists( 'Update_Post' ) ) {
 			add_action( 'delete_post', array( $this, 'delete_from_db' ) );
 			add_filter( 'wp_insert_post_data', array( $this, 'add_purple_id' ), 99, 2 );
 
-			// Use this hook to save all posts in the db.
-			/*          add_action( 'wp_loaded',  array( $this,'save_all_posts') );*/
+			add_action( 'updated_post_meta', array( $this, 'update_post_after_meta' ), 10, 2 );
+		}
+
+		public function update_post_after_meta( $meta_id, $post_id ) {
+			$post = get_post( $post_id );
+			$this->save_in_db( $post_id, $post, false );
 		}
 
 		/**
@@ -263,6 +267,7 @@ if ( ! class_exists( 'Update_Post' ) ) {
 				$this->update_comments( $comments );
 				$this->update_users();
 				$this->update_taxonomies( $post );
+
 				$this->notify_acm();
 			}
 		}
@@ -270,12 +275,13 @@ if ( ! class_exists( 'Update_Post' ) ) {
 		private function notify_acm() {
 			$last_notified_date = get_option( 'sprylab_purple_nosql_last_notified' );
 			if ( abs( time() - $last_notified_date ) > 60 ) {
-				$url      = get_option( Nosql_Settings::PURPLE_NOSQL_ACM_URL );
-				$api_key  = get_option( Nosql_Settings::PURPLE_NOSQL_ACM_API_KEY );
-				$data     = array(
-					'username'  => get_option( Nosql_Settings::PURPLE_NOSQL_ACM_USERNAME )
-				/*	'from_date' => date( 'Y/m/d, H:i:s', $last_notified_date ),
-					'to_date'   => date( 'Y/m/d, H:i:s' ),*/
+				$url     = get_option( Nosql_Settings::PURPLE_NOSQL_ACM_URL );
+				$api_key = get_option( Nosql_Settings::PURPLE_NOSQL_ACM_API_KEY );
+				$data    = array(
+					'username' => get_option( Nosql_Settings::PURPLE_NOSQL_ACM_USERNAME ),
+					/*
+				  'from_date' => date( 'Y/m/d, H:i:s', $last_notified_date ),
+						'to_date'   => date( 'Y/m/d, H:i:s' ),*/
 				);
 				wp_remote_post(
 					$url . '/core/index/articles',
